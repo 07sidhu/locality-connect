@@ -1,43 +1,62 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+
+// ✅ Define the shape of a Ticket
+interface Ticket {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED";
+}
 
 export default function Dashboard() {
   const router = useRouter();
-  const [tickets, setTickets] = useState([]);
+  
+  // ✅ Types Applied
+  const [tickets, setTickets] = useState<Ticket[]>([]); 
   const [showForm, setShowForm] = useState(false);
   
-  // Form State
   const [newTicket, setNewTicket] = useState({
     title: "",
     description: "",
     category: "PLUMBING",
-    // 👇 PASTE YOUR SOCIETY ID HERE AGAIN (In Phase 7 we will automate this)
     societyId: "6931a095e68baacfab9739f2", 
   });
 
-
-
-  const fetchTickets = async () => {
+  // ✅ Helper for Manual Refresh (Used by Submit Button)
+  const refreshTickets = useCallback(async () => {
     try {
       const res = await fetch("/api/tickets");
-      if (res.status === 401) {
-        router.push("/login"); // Redirect if token expired
-        return;
-      }
+      if (res.status === 401) return; 
       const data = await res.json();
       setTickets(data.tickets || []);
     } catch (error) {
       console.error("Failed to fetch tickets");
     }
-  };
-    // 1. Fetch Tickets on Load
-  useEffect(() => {
-    fetchTickets();
   }, []);
 
-  // 2. Handle Submit
+  // ✅ Initial Load (Defined INSIDE to prevent render loops)
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const res = await fetch("/api/tickets");
+        if (res.status === 401) {
+          router.push("/login");
+          return;
+        }
+        const data = await res.json();
+        setTickets(data.tickets || []);
+      } catch (error) {
+        console.error("Failed to fetch tickets");
+      }
+    };
+
+    loadInitialData();
+  }, []); // <--- Empty array ensures this runs ONLY once on mount.
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await fetch("/api/tickets", {
@@ -45,9 +64,9 @@ export default function Dashboard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newTicket),
     });
-    setShowForm(false); // Close form
-    fetchTickets(); // Refresh list
-    setNewTicket({ ...newTicket, title: "", description: "" }); // Reset inputs
+    setShowForm(false);
+    refreshTickets(); // <--- Call the helper here
+    setNewTicket({ ...newTicket, title: "", description: "" });
   };
 
   return (
@@ -106,7 +125,7 @@ export default function Dashboard() {
           {tickets.length === 0 ? (
             <p className="text-gray-500">No complaints yet. Everything is good!</p>
           ) : (
-            tickets.map((ticket: any) => (
+            tickets.map((ticket) => (
               <div key={ticket._id} className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500 flex justify-between items-center">
                 <div>
                   <h3 className="font-bold text-lg">{ticket.title}</h3>
