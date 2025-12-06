@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Register() {
   const router = useRouter();
@@ -10,14 +11,12 @@ export default function Register() {
     email: "",
     password: "",
     flatNumber: "",
-    role: "RESIDENT",
-    // 👇 PASTE THE ID YOU COPIED FROM COMPASS HERE 👇
     societyId: "6931a095e68baacfab9739f2", 
   });
   
   const [status, setStatus] = useState("");
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -29,14 +28,17 @@ export default function Register() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+            ...form,
+            role: "RESIDENT" // Force Resident Role
+        }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
         setStatus("Success! Redirecting...");
-        setTimeout(() => router.push("/"), 2000); // Go to home after 2 seconds
+        setTimeout(() => router.push("/login"), 2000);
       } else {
         setStatus("Error: " + data.message);
       }
@@ -76,24 +78,14 @@ export default function Register() {
             className="w-full p-2 border rounded"
             required
           />
-          <div className="flex gap-2">
-             <input
-              name="flatNumber"
-              placeholder="Flat No (e.g. A-101)"
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-              required
-            />
-            <select
-              name="role"
-              onChange={handleChange}
-              className="p-2 border rounded bg-white"
-            >
-              <option value="RESIDENT">Resident</option>
-              <option value="ADMIN">Admin</option>
-            </select>
-          </div>
-
+          <input
+            name="flatNumber"
+            placeholder="Flat No (e.g. A-101)"
+            onChange={handleChange}
+            className="w-full p-2 border rounded"
+            required
+          />
+          
           <button
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
@@ -103,6 +95,10 @@ export default function Register() {
         </form>
 
         {status && <p className="mt-4 text-center text-sm">{status}</p>}
+
+        <div className="mt-4 text-center text-xs text-gray-400">
+            Are you the Secretary? <Link href="/admin-signup" className="underline hover:text-blue-500">Admin Registration</Link>
+        </div>
       </div>
     </div>
   );

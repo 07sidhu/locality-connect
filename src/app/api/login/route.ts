@@ -14,25 +14,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    // 2. Check Password (Direct string comparison for now)
-    // Note: In real production, we use bcrypt.compare() here.
+    // 2. Check Password
     if (user.password !== password) {
       return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
     }
 
-    // 3. Generate Token (The Digital ID Card)
+    // ✅ 3. SECURITY CHECK: Is the user Verified?
+    // If user is a Resident and Admin hasn't approved them yet -> BLOCK THEM.
+    if (!user.isVerified) {
+      return NextResponse.json(
+        { message: "Access Denied. Your account is pending Admin Approval." },
+        { status: 403 } // 403 = Forbidden
+      );
+    }
+
+    // 4. Generate Token
     const token = jwt.sign(
       { userId: user._id, role: user.role, name: user.name },
       process.env.JWT_SECRET!,
-      { expiresIn: "1d" } // Token expires in 1 day
+      { expiresIn: "1d" }
     );
 
-    // 4. Return the Token
-    const response = NextResponse.json({ message: "Login successful" });
+    const response = NextResponse.json({ 
+      message: "Login successful",
+      role: user.role // Sending role so frontend knows where to redirect
+    });
     
-    // Set the token in a generic cookie (simplest way for Next.js)
     response.cookies.set("token", token, {
-      httpOnly: true, // Frontend JS cannot steal it
+      httpOnly: true,
       path: "/", 
     });
 

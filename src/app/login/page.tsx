@@ -8,7 +8,7 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [status, setStatus] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("Checking credentials...");
 
@@ -22,7 +22,14 @@ export default function Login() {
 
     if (res.ok) {
       setStatus("Success! Entering Society...");
-      setTimeout(() => router.push("/dashboard"), 1500); // Redirect to Dashboard
+      
+      // ✅ SMART REDIRECT LOGIC
+      if (data.role === "ADMIN") {
+        setTimeout(() => router.push("/admin"), 1500); // Admins go to Admin Panel
+      } else {
+        setTimeout(() => router.push("/dashboard"), 1500); // Residents go to Dashboard
+      }
+      
     } else {
       setStatus("Error: " + data.message);
     }
