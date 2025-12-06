@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-// ✅ Define the shape of a Ticket
+// ✅ 1. Define strict types
 interface Ticket {
   _id: string;
   title: string;
@@ -12,11 +12,19 @@ interface Ticket {
   status: "OPEN" | "IN_PROGRESS" | "RESOLVED";
 }
 
+interface FeedPost {
+  _id: string;
+  content: string;
+  type: "GENERAL" | "ANNOUNCEMENT";
+  authorName: string;
+  createdAt: string;
+}
+
 export default function Dashboard() {
   const router = useRouter();
   
-  // ✅ Types Applied
   const [tickets, setTickets] = useState<Ticket[]>([]); 
+  const [latestNotice, setLatestNotice] = useState<FeedPost | null>(null);
   const [showForm, setShowForm] = useState(false);
   
   const [newTicket, setNewTicket] = useState({
@@ -26,36 +34,37 @@ export default function Dashboard() {
     societyId: "6931a095e68baacfab9739f2", 
   });
 
-  // ✅ Helper for Manual Refresh (Used by Submit Button)
-  const refreshTickets = useCallback(async () => {
-    try {
-      const res = await fetch("/api/tickets");
-      if (res.status === 401) return; 
-      const data = await res.json();
-      setTickets(data.tickets || []);
-    } catch (error) {
-      console.error("Failed to fetch tickets");
-    }
-  }, []);
-
-  // ✅ Initial Load (Defined INSIDE to prevent render loops)
   useEffect(() => {
-    const loadInitialData = async () => {
+    const loadData = async () => {
       try {
-        const res = await fetch("/api/tickets");
-        if (res.status === 401) {
+        // 1. Fetch Tickets
+        const ticketRes = await fetch("/api/tickets");
+        if (ticketRes.status === 401) {
           router.push("/login");
           return;
         }
-        const data = await res.json();
-        setTickets(data.tickets || []);
+        const ticketData = await ticketRes.json();
+        setTickets(ticketData.tickets || []);
+
+        // 2. Fetch Feed
+        const feedRes = await fetch("/api/feed");
+        const feedData = await feedRes.json();
+        
+        // Safe Casting
+        const posts = (feedData.posts || []) as FeedPost[];
+        
+        // Find the first ANNOUNCEMENT
+        const notice = posts.find((p) => p.type === "ANNOUNCEMENT");
+        
+        if (notice) setLatestNotice(notice);
+
       } catch (error) {
-        console.error("Failed to fetch tickets");
+        console.error("Failed to load dashboard data");
       }
     };
 
-    loadInitialData();
-  }, []); // <--- Empty array ensures this runs ONLY once on mount.
+    loadData();
+  }, []); // <--- ✅ CHANGED BACK TO EMPTY ARRAY []
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,22 +74,37 @@ export default function Dashboard() {
       body: JSON.stringify(newTicket),
     });
     setShowForm(false);
-    refreshTickets(); // <--- Call the helper here
-    setNewTicket({ ...newTicket, title: "", description: "" });
+    window.location.reload(); 
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">My Dashboard</h1>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium"
           >
             {showForm ? "Cancel" : "+ New Complaint"}
           </button>
         </div>
+
+        {/* 📢 LATEST ANNOUNCEMENT WIDGET */}
+        {latestNotice && (
+          <div className="bg-blue-600 text-white p-6 rounded-xl shadow-lg mb-8 animate-fade-in-up">
+            <div className="flex items-start gap-4">
+              <div className="text-3xl">📢</div>
+              <div>
+                <h3 className="font-bold text-lg mb-1">Latest Announcement</h3>
+                <p className="opacity-90 leading-relaxed">{latestNotice.content}</p>
+                <div className="mt-3 text-xs opacity-75 font-mono">
+                  Posted by {latestNotice.authorName} • {new Date(latestNotice.createdAt).toDateString()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TICKET FORM */}
         {showForm && (
