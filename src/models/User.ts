@@ -3,16 +3,18 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IUser extends Document {
   name: string;
   email: string;
-  role: "RESIDENT" | "ADMIN" | "GUARD";
-  societyId: mongoose.Schema.Types.ObjectId; // Link to Society
-  flatNumber?: string; // Optional for now
   password: string;
+  role: "RESIDENT" | "ADMIN" | "GUARD";
+  societyId: mongoose.Schema.Types.ObjectId;
+  flatNumber?: string;
+  isVerified: boolean; // <--- NEW FIELD
 }
 
 const UserSchema: Schema<IUser> = new Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
     role: {
       type: String,
       enum: ["RESIDENT", "ADMIN", "GUARD"],
@@ -20,11 +22,12 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     societyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Society", // This links the User to a specific Society Table
+      ref: "Society",
       required: true,
     },
     flatNumber: { type: String },
-    password: { type: String, required: true },
+    // By default, new users are NOT verified (Pending Approval)
+    isVerified: { type: Boolean, default: false }, 
   },
   { timestamps: true }
 );
