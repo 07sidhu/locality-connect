@@ -107,7 +107,7 @@ export default function LandingPage() {
       {/* 3. FOOTER */}
       <footer className="mt-auto py-10 border-t border-gray-100 bg-gray-50 text-center">
         <p className="text-gray-500 text-sm">
-          © 2025 LocalityConnect. Built by Sidhuji.
+          © 2025 LocalityConnect. Built by Sidhuji under the aegis of data developer.
         </p>
       </footer>
 
