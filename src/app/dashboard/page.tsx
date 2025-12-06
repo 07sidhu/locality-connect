@@ -17,10 +17,7 @@ export default function Dashboard() {
     societyId: "6931a095e68baacfab9739f2", 
   });
 
-  // 1. Fetch Tickets on Load
-  useEffect(() => {
-    fetchTickets();
-  }, []);
+
 
   const fetchTickets = async () => {
     try {
@@ -35,6 +32,10 @@ export default function Dashboard() {
       console.error("Failed to fetch tickets");
     }
   };
+    // 1. Fetch Tickets on Load
+  useEffect(() => {
+    fetchTickets();
+  }, []);
 
   // 2. Handle Submit
   const handleSubmit = async (e: React.FormEvent) => {
