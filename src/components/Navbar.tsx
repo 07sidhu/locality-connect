@@ -13,8 +13,10 @@ export default function Navbar() {
 
   const navItems = [
     { name: "Home", path: "/dashboard", icon: "🏠" },
-    { name: "Feed", path: "/feed", icon: "📰" },
-    { name: "Services", path: "/services", icon: "🛠️" },
+    { name: "Community", path: "/community", icon: "💬" }, // Was Feed
+    { name: "Access", path: "/access", icon: "🛡️" }, // New Gate Mgmt
+    { name: "Help", path: "/services", icon: "🛠️" }, // Merged Services & Complaints
+    { name: "Profile", path: "/profile", icon: "👤" },
   ];
 
   return (

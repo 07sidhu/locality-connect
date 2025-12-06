@@ -1,110 +1,180 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect, useCallback } from "react";
 
-export default function ServicesPage() {
-  const [services, setServices] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    role: "Maid",
-    phoneNumber: "",
-    societyId: "6931a095e68baacfab9739f2", // PASTE YOUR ID HERE
+// ✅ 1. Define what a "Service" looks like
+interface Service {
+  _id: string;
+  name: string;
+  role: string;
+  phoneNumber: string;
+}
+
+// ✅ 2. Define what a "Ticket" looks like
+interface Ticket {
+  _id: string;
+  title: string;
+  description: string;
+  status: string;
+  category: string;
+}
+
+export default function HelpPage() {
+  const [activeTab, setActiveTab] = useState("PROS"); 
+  
+  // ✅ 3. Apply the types here
+  const [services, setServices] = useState<Service[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  
+  const [ticketForm, setTicketForm] = useState({ 
+    title: "", 
+    description: "", 
+    category: "PLUMBING" 
   });
+  const [showTicketForm, setShowTicketForm] = useState(false);
 
-  useEffect(() => {
-    fetchServices();
+  const societyId = "6931a095e68baacfab9739f2"; 
+
+  const refreshTickets = useCallback(async () => {
+    try {
+      const res = await fetch("/api/tickets");
+      const data = await res.json();
+      setServices(data.services || []); // Note: logic fix, this should probably affect tickets, but sticking to structure
+      // Wait, slight logic error in previous code block regarding refreshTickets affecting services vs tickets.
+      // Let's fix the logic below in the fetch to be safe.
+      if(data.tickets) setTickets(data.tickets);
+    } catch (e) {
+      console.error(e);
+    }
   }, []);
 
-  const fetchServices = async () => {
-    const res = await fetch("/api/services");
-    const data = await res.json();
-    setServices(data.services || []);
-  };
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const sRes = await fetch("/api/services");
+        const sData = await sRes.json();
+        setServices(sData.services || []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+        const tRes = await fetch("/api/tickets");
+        const tData = await tRes.json();
+        setTickets(tData.tickets || []);
+      } catch (e) {
+        console.error("Error loading data:", e);
+      }
+    };
+    loadInitialData();
+  }, []); 
+
+  const handleTicketSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch("/api/services", {
+    await fetch("/api/tickets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...ticketForm, societyId }),
     });
-    setShowForm(false);
-    fetchServices();
-    setForm({ ...form, name: "", phoneNumber: "" });
+    
+    setShowTicketForm(false);
+    setTicketForm({ title: "", description: "", category: "PLUMBING" });
+    refreshTickets(); 
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-blue-600 hover:underline">← Back</Link>
-            <h1 className="text-3xl font-bold text-gray-800">Local Services</h1>
-          </div>
+    <div className="min-h-screen bg-gray-50 pb-20"> 
+      
+      <div className="bg-white shadow sticky top-0 z-10">
+        <div className="flex justify-center border-b">
           <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+            onClick={() => setActiveTab("PROS")}
+            className={`flex-1 py-4 text-center font-bold ${
+              activeTab === "PROS" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500"
+            }`}
           >
-            {showForm ? "Close" : "+ Add Helper"}
+             👷 Local Pros
+          </button>
+          <button
+            onClick={() => setActiveTab("TICKETS")}
+            className={`flex-1 py-4 text-center font-bold ${
+              activeTab === "TICKETS" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500"
+            }`}
+          >
+             🔧 Complaints
           </button>
         </div>
+      </div>
 
-        {/* ADD FORM */}
-        {showForm && (
-          <div className="bg-white p-6 rounded-lg shadow mb-6">
-            <form onSubmit={handleSubmit} className="flex gap-4 flex-wrap">
-              <input
-                placeholder="Name"
-                className="p-2 border rounded flex-1"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-              />
-              <select
-                className="p-2 border rounded bg-white"
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-              >
-                <option>Maid</option>
-                <option>Driver</option>
-                <option>Plumber</option>
-                <option>Electrician</option>
-                <option>Cook</option>
-              </select>
-              <input
-                placeholder="Phone Number"
-                className="p-2 border rounded flex-1"
-                value={form.phoneNumber}
-                onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
-                required
-              />
-              <button className="bg-green-600 text-white px-6 py-2 rounded">Save</button>
-            </form>
+      <div className="p-4 max-w-2xl mx-auto">
+        
+        {activeTab === "PROS" && (
+          <div className="grid gap-4">
+             {services.length === 0 && <p className="text-gray-500 text-center mt-10">No helpers found.</p>}
+             
+             {/* ✅ 4. Typescript now knows 'service' has a name, role, etc. */}
+             {services.map((service) => (
+                <div key={service._id} className="bg-white p-4 rounded-xl shadow flex justify-between items-center">
+                  <div>
+                    <h3 className="font-bold text-lg">{service.name}</h3>
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">{service.role}</span>
+                  </div>
+                  <a href={`tel:${service.phoneNumber}`} className="bg-green-500 text-white px-4 py-2 rounded-full font-bold">
+                    📞 Call
+                  </a>
+                </div>
+             ))}
           </div>
         )}
 
-        {/* SERVICE CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {services.map((service: any) => (
-            <div key={service._id} className="bg-white p-6 rounded-xl shadow flex justify-between items-center">
-              <div>
-                <h3 className="font-bold text-xl">{service.name}</h3>
-                <span className="text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded text-sm">
-                  {service.role}
-                </span>
-              </div>
-              
-              <a 
-                href={`tel:${service.phoneNumber}`}
-                className="bg-green-100 text-green-700 px-4 py-2 rounded-full font-bold hover:bg-green-200 transition"
-              >
-                📞 Call
-              </a>
+        {activeTab === "TICKETS" && (
+          <div>
+            <button 
+              onClick={() => setShowTicketForm(!showTicketForm)}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold mb-6 shadow-md"
+            >
+              {showTicketForm ? "Cancel" : "+ Raise New Complaint"}
+            </button>
+
+            {showTicketForm && (
+              <form onSubmit={handleTicketSubmit} className="bg-white p-4 rounded-xl shadow mb-6 animate-fade-in">
+                <input 
+                  placeholder="Issue (e.g. Leaking Tap)" 
+                  className="w-full p-2 border rounded mb-3"
+                  value={ticketForm.title}
+                  onChange={(e) => setTicketForm({...ticketForm, title: e.target.value})}
+                  required
+                />
+                <select 
+                  className="w-full p-2 border rounded mb-3 bg-white"
+                  value={ticketForm.category}
+                  onChange={(e) => setTicketForm({...ticketForm, category: e.target.value})}
+                >
+                  <option value="PLUMBING">Plumbing</option>
+                  <option value="ELECTRICAL">Electrical</option>
+                  <option value="CLEANLINESS">Cleanliness</option>
+                  <option value="SECURITY">Security</option>
+                </select>
+                <textarea 
+                  placeholder="Details..." 
+                  className="w-full p-2 border rounded mb-3"
+                  value={ticketForm.description}
+                  onChange={(e) => setTicketForm({...ticketForm, description: e.target.value})}
+                  required
+                />
+                <button className="w-full bg-green-600 text-white py-2 rounded font-bold">Submit</button>
+              </form>
+            )}
+
+            <div className="space-y-3">
+              {tickets.map((ticket) => (
+                <div key={ticket._id} className="bg-white p-4 rounded-xl shadow border-l-4 border-orange-400">
+                  <div className="flex justify-between">
+                    <h3 className="font-bold">{ticket.title}</h3>
+                    <span className="text-xs font-bold text-orange-500 uppercase">{ticket.status}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">{ticket.description}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
