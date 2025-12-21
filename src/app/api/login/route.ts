@@ -19,16 +19,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
     }
 
-    // ✅ 3. SECURITY CHECK: Is the user Verified?
-    // If user is a Resident and Admin hasn't approved them yet -> BLOCK THEM.
-    if (!user.isVerified) {
+    // 🛑 3. THE BOUNCER CHECK (This is what you were missing!)
+    // If the user is NOT verified, kick them out immediately.
+    if (user.isVerified === false) {
       return NextResponse.json(
-        { message: "Access Denied. Your account is pending Admin Approval." },
-        { status: 403 } // 403 = Forbidden
+        { message: "Account pending Admin approval. Please wait." },
+        { status: 403 } // 403 Forbidden
       );
     }
 
-    // 4. Generate Token
+    // 4. Generate Token (Only if they passed the check above)
     const token = jwt.sign(
       { userId: user._id, role: user.role, name: user.name },
       process.env.JWT_SECRET!,
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
     const response = NextResponse.json({ 
       message: "Login successful",
-      role: user.role // Sending role so frontend knows where to redirect
+      role: user.role 
     });
     
     response.cookies.set("token", token, {
