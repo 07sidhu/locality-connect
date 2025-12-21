@@ -7,27 +7,20 @@ export interface ITicket extends Document {
   status: string;
   userId: mongoose.Schema.Types.ObjectId;
   societyId: mongoose.Schema.Types.ObjectId;
+  assignedTo?: string; // <--- NEW: Name of the staff assigned
 }
 
 const TicketSchema = new Schema<ITicket>(
   {
     title: { type: String, required: true },
     description: { type: String, required: true },
-    category: {
-      type: String,
-      enum: ["PLUMBING", "ELECTRICAL", "CLEANLINESS", "SECURITY", "OTHER"],
-      default: "OTHER",
-    },
-    status: {
-      type: String,
-      enum: ["OPEN", "IN_PROGRESS", "RESOLVED"],
-      default: "OPEN",
-    },
+    category: { type: String, default: "OTHER" },
+    status: { type: String, enum: ["OPEN", "IN_PROGRESS", "RESOLVED"], default: "OPEN" },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     societyId: { type: mongoose.Schema.Types.ObjectId, ref: "Society", required: true },
+    assignedTo: { type: String }, // <--- NEW FIELD
   },
   { timestamps: true }
 );
 
-// This line is crucial. It exports the model so other files can use it.
 export const Ticket = mongoose.models.Ticket || mongoose.model<ITicket>("Ticket", TicketSchema);
