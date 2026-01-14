@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import User from "@/models/User";
+import bcrypt from "bcryptjs"; // <--- 1. Import
 
 export async function POST(req: Request) {
   try {
@@ -9,50 +10,36 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { name, email, password, role, societyId, flatNumber, adminKey } = body;
 
-    // 1. Check if email exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return NextResponse.json(
-        { message: "Email already registered" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Email already registered" }, { status: 400 });
     }
 
-    // 2. ADMIN SECURITY CHECK
-    let isVerified = false; // Default: Residents need approval
-    
+    // Admin Check Logic
+    let isVerified = false;
     if (role === "ADMIN") {
-      // If trying to be Admin, MUST provide correct secret key
       if (adminKey !== process.env.ADMIN_SECRET_KEY) {
-        return NextResponse.json(
-          { message: "Invalid Admin Secret Key!" },
-          { status: 403 } // Forbidden
-        );
+        return NextResponse.json({ message: "Invalid Admin Secret Key!" }, { status: 403 });
       }
-      // If key is correct, Admin is auto-verified
       isVerified = true; 
     }
 
-    // 3. Create User
+    // ✅ 2. HASH THE PASSWORD
+    const hashedPassword = await bcrypt.hash(password, 10); // 10 is the "salt rounds"
+
     const newUser = await User.create({
       name,
       email,
-      password,
+      password: hashedPassword, // <--- Save the Hash, not the text
       role: role || "RESIDENT",
       societyId,
       flatNumber: flatNumber || "Admin Office",
-      isVerified, // Admins = True, Residents = False
+      isVerified,
     });
 
-    return NextResponse.json(
-      { message: "Registration successful!", user: newUser },
-      { status: 201 }
-    );
+    return NextResponse.json({ message: "Registration successful!", user: newUser }, { status: 201 });
 
   } catch (error) {
-    return NextResponse.json(
-      { message: "Error registering", error: (error as Error).message },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Error registering" }, { status: 500 });
   }
 }

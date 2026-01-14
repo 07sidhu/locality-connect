@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import User from "@/models/User";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
@@ -14,10 +15,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    // 2. Check Password
-    if (user.password !== password) {
+// ✅ 2. SECURE CHECK using bcrypt
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    if (!isMatch) {
       return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
     }
+
 
     // 🛑 3. THE BOUNCER CHECK (This is what you were missing!)
     // If the user is NOT verified, kick them out immediately.
