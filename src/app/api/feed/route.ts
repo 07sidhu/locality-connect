@@ -37,10 +37,11 @@ export async function POST(req: Request) {
     const user: any = await getUserFromToken(); // Need "any" to access user.name
     if (!user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-    const { content, type, societyId } = await req.json();
+    const { content, type, societyId, imageUrl } = await req.json();
 
     const newPost = await Post.create({
       content,
+      imageUrl,
       type: type || "GENERAL",
       authorName: user.name, // Saved from token
       authorId: user.userId,

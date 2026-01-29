@@ -16,6 +16,7 @@ const MarketplaceItemSchema = new Schema<IMarketplaceItem>(
     title: { type: String, required: true },
     price: { type: Number, required: true },
     description: { type: String, required: true },
+    imageUrl: { type: String }, // <--- NEW FIELD
     sellerName: { type: String, required: true },
     sellerPhone: { type: String, required: true }, 
     sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

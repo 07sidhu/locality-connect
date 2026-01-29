@@ -11,6 +11,7 @@ export interface IPost extends Document {
 const PostSchema = new Schema<IPost>(
   {
     content: { type: String, required: true },
+    imageUrl: { type: String }, // <--- NEW FIELD
     type: {
       type: String,
       enum: ["ANNOUNCEMENT", "GENERAL"],

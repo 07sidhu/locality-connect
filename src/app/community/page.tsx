@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+// Types
 interface Post {
   _id: string;
   content: string;
   type: "GENERAL" | "ANNOUNCEMENT";
   authorName: string;
   createdAt: string;
+  imageUrl?: string; // <--- Image for Feed
 }
 
 interface MarketItem {
@@ -17,6 +19,7 @@ interface MarketItem {
   description: string;
   sellerName: string;
   sellerPhone: string;
+  imageUrl?: string; // <--- Image for Market
 }
 
 export default function CommunityPage() {
@@ -24,6 +27,10 @@ export default function CommunityPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [marketItems, setMarketItems] = useState<MarketItem[]>([]);
   
+  // Image Upload State
+  const [image, setImage] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+
   // Forms
   const [content, setContent] = useState("");
   const [marketForm, setMarketForm] = useState({ title: "", price: "", description: "", contactPhone: "" });
@@ -31,58 +38,91 @@ export default function CommunityPage() {
 
   const societyId = "6931a095e68baacfab9739f2"; 
 
-  // ✅ 1. Helper for MANUAL refresh (Used by Forms)
+  // ☁️ Helper: Upload to Cloudinary
+  const uploadImage = async () => {
+    if (!image) return null;
+    const formData = new FormData();
+    formData.append("file", image);
+    
+    // 👇 REPLACE THESE
+    formData.append("upload_preset", "locality_connect"); 
+    const cloudName = "dzk2wltpk"; 
+
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      return data.secure_url; 
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+
   const refreshData = useCallback(async () => {
     try {
-      // Fetch Feed
       const feedRes = await fetch("/api/feed");
       const feedData = await feedRes.json();
       setPosts(feedData.posts || []);
 
-      // Fetch Market
       const marketRes = await fetch("/api/marketplace");
       const marketData = await marketRes.json();
       setMarketItems(marketData.items || []);
     } catch (e) { console.error(e); }
   }, []);
 
-  // ✅ 2. Initial Load (Defined INSIDE to prevent errors)
   useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        const feedRes = await fetch("/api/feed");
-        const feedData = await feedRes.json();
-        setPosts(feedData.posts || []);
+    refreshData();
+  }, [refreshData]);
 
-        const marketRes = await fetch("/api/marketplace");
-        const marketData = await marketRes.json();
-        setMarketItems(marketData.items || []);
-      } catch (e) { console.error(e); }
-    };
-    loadInitialData();
-  }, []); // <--- Empty array = Runs ONCE
-
+  // --- SUBMIT FEED POST ---
   const handlePostSubmit = async () => {
     if (!content.trim()) return;
+    setUploading(true);
+
+    const uploadedUrl = await uploadImage();
+
     await fetch("/api/feed", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content, type: "GENERAL", societyId }),
+      body: JSON.stringify({ 
+        content, 
+        type: "GENERAL", 
+        societyId,
+        imageUrl: uploadedUrl // Send Image
+      }),
     });
+    
     setContent("");
-    refreshData(); // Call helper
+    setImage(null);
+    setUploading(false);
+    refreshData();
   };
 
+  // --- SUBMIT MARKET LISTING ---
   const handleSellSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploading(true);
+
+    const uploadedUrl = await uploadImage();
+
     await fetch("/api/marketplace", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...marketForm, societyId }),
+      body: JSON.stringify({ 
+        ...marketForm, 
+        societyId,
+        imageUrl: uploadedUrl // Send Image
+      }),
     });
+
     setShowSellForm(false);
     setMarketForm({ title: "", price: "", description: "", contactPhone: "" });
-    refreshData(); // Call helper
+    setImage(null);
+    setUploading(false);
+    refreshData();
   };
 
   return (
@@ -114,18 +154,28 @@ export default function CommunityPage() {
             {/* Input Box */}
             <div className="bg-white p-4 rounded-xl shadow mb-6">
               <textarea
-                className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
                 placeholder="What's on your mind?"
                 rows={3}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
               />
-              <div className="flex justify-end mt-2">
+              
+              {/* Image Input for Feed */}
+              <input 
+                type="file" 
+                accept="image/*"
+                onChange={(e) => setImage(e.target.files ? e.target.files[0] : null)}
+                className="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-2"
+              />
+
+              <div className="flex justify-end">
                 <button 
                   onClick={handlePostSubmit}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold hover:bg-blue-700"
+                  disabled={uploading}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold hover:bg-blue-700 disabled:opacity-50"
                 >
-                  Post
+                  {uploading ? "Uploading..." : "Post"}
                 </button>
               </div>
             </div>
@@ -150,7 +200,16 @@ export default function CommunityPage() {
                       <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">📢 Official</span>
                     )}
                   </div>
-                  <p className="text-gray-800 whitespace-pre-wrap">{post.content}</p>
+                  <p className="text-gray-800 whitespace-pre-wrap mb-2">{post.content}</p>
+                  
+                  {/* Display Feed Image */}
+                  {post.imageUrl && (
+                    <img 
+                      src={post.imageUrl} 
+                      alt="Post attachment" 
+                      className="w-full h-64 object-cover rounded-lg border"
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -198,17 +257,37 @@ export default function CommunityPage() {
                   onChange={(e) => setMarketForm({...marketForm, description: e.target.value})}
                   required
                 />
-                <button className="w-full bg-blue-600 text-white py-2 rounded font-bold">List Item</button>
+                
+                {/* Image Input for Market */}
+                <label className="block text-xs text-gray-500 mb-1">Item Photo</label>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={(e) => setImage(e.target.files ? e.target.files[0] : null)}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-4"
+                />
+
+                <button 
+                  disabled={uploading}
+                  className="w-full bg-blue-600 text-white py-2 rounded font-bold disabled:opacity-50"
+                >
+                  {uploading ? "Uploading..." : "List Item"}
+                </button>
               </form>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {marketItems.map((item) => (
                 <div key={item._id} className="bg-white rounded-xl shadow overflow-hidden border">
-                  {/* Placeholder Image */}
-                  <div className="h-32 bg-gray-200 flex items-center justify-center text-4xl">
-                    🛋️
-                  </div>
+                  {/* Image Display */}
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.title} className="w-full h-48 object-cover" />
+                  ) : (
+                    <div className="h-48 bg-gray-200 flex items-center justify-center text-4xl">
+                      🛋️
+                    </div>
+                  )}
+                  
                   <div className="p-4">
                     <div className="flex justify-between items-start">
                       <h3 className="font-bold text-lg truncate">{item.title}</h3>

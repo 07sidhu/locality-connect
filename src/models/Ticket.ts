@@ -19,6 +19,7 @@ const TicketSchema = new Schema<ITicket>(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     societyId: { type: mongoose.Schema.Types.ObjectId, ref: "Society", required: true },
     assignedTo: { type: String }, // <--- NEW FIELD
+    imageUrl: { type: String },
   },
   { timestamps: true }
 );

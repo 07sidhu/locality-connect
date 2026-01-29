@@ -44,12 +44,13 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, price, description, contactPhone, societyId } = body;
+    const { title, price, description, contactPhone, societyId, imageUrl } = body;
 
     const newItem = await MarketplaceItem.create({
       title,
       price,
       description,
+      imageUrl,
       sellerName: user.name, // Auto-fill seller name from token
       sellerPhone: contactPhone,
       sellerId: user.userId,

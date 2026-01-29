@@ -45,12 +45,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { title, description, category, societyId } = await req.json();
+    const { title, description, category, societyId, imageUrl } = await req.json();
 
     const newTicket = await Ticket.create({
       title,
       description,
       category,
+      imageUrl,
       userId: user.userId,
       societyId,
     });
